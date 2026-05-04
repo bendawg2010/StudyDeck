@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0a0a14"/>
+  <meta name="description" content="StudyDeck - Flashcards. Faster. Free. A free, beautiful Quizlet alternative that runs entirely in your browser."/>
+  <title>studydeck - Flashcards. Faster. Free.</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg"/>
+  <link rel="apple-touch-icon" href="assets/icon.svg"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <header class="app-header">
+    <a href="#/" class="logo" aria-label="StudyDeck home">
+      <img src="assets/icon.svg" alt="" class="logo-mark"/>
+      <span class="logo-text">studydeck</span>
+    </a>
+    <nav class="header-nav">
+      <a class="pill pill-os" href="https://github.com/bendawg2010/StudyDeck" target="_blank" rel="noopener">
+        <span class="pill-dot"></span>Open source
+      </a>
+      <a class="pill pill-tip" href="https://cash.app/$Dryeetsolutions" target="_blank" rel="noopener">
+        Tip on Cash App
+      </a>
+      <button id="sound-toggle" class="icon-btn" title="Sound on/off" aria-label="Toggle sound">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+      </button>
+    </nav>
+  </header>
+
+  <main id="app" role="main" aria-live="polite"></main>
+
+  <footer class="app-footer">
+    <div class="footer-line">&copy; 2026 &middot; MIT &middot; Open source &middot; Free forever</div>
+    <div class="footer-links">
+      <a href="https://newswidgets.pages.dev" target="_blank" rel="noopener">News</a>
+      <a href="https://classschedulewidget.pages.dev" target="_blank" rel="noopener">Class Schedule</a>
+      <a href="https://scorewidget.pages.dev" target="_blank" rel="noopener">Scores</a>
+      <a href="https://f1widget.pages.dev" target="_blank" rel="noopener">F1</a>
+      <a href="https://sportsnewswidget.pages.dev" target="_blank" rel="noopener">Sports News</a>
+    </div>
+  </footer>
+
+  <div id="toast-host" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+  <div id="modal-host" class="modal-host" aria-hidden="true"></div>
+
+  <script src="js/db.js"></script>
+  <script src="js/sample-data.js"></script>
+  <script src="js/pages/home.js"></script>
+  <script src="js/pages/set-editor.js"></script>
+  <script src="js/pages/flashcards.js"></script>
+  <script src="js/pages/match.js"></script>
+  <script src="js/pages/blocks.js"></script>
+  <script src="js/pages/test.js"></script>
+  <script src="js/pages/results.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
