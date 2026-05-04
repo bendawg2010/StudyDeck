@@ -2098,3 +2098,341 @@ main {
   text-decoration: none;
 }
 .quizlet-landing-back:hover { color: rgba(255,255,255,0.85); }
+
+/* ===================== Quizlet import v2 — visual diagrams ===================== */
+.quizlet-import-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: min(640px, 88vw);
+  max-width: 640px;
+}
+.qz-intro {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.72);
+  padding: 12px 14px;
+  background: rgba(193,71,255,0.08);
+  border: 1px solid rgba(193,71,255,0.20);
+  border-radius: 10px;
+}
+
+/* ----- Step shell ----- */
+.qz-step {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.qz-step-head {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.qz-step-num {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFB454 0%, #FF6B6B 50%, #C147FF 100%);
+  display: grid; place-items: center;
+  font-weight: 900; font-size: 15px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 6px 14px rgba(255,107,107,0.30);
+}
+.qz-step-headtext { flex: 1; }
+.qz-step-title {
+  font-size: 15px; font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.1px;
+}
+.qz-step-sub {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.62);
+  line-height: 1.45;
+}
+.qz-step-help {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+}
+.qz-step-help kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  margin: 0 1px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  color: rgba(255,255,255,0.85);
+}
+
+/* ----- Visual: shared ----- */
+.qz-visual {
+  background: #0c0e1a;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 14px;
+  position: relative;
+}
+
+/* ----- Step 1: bookmark bar mock + drag CTA ----- */
+.qz-bookmark-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  font-family: -apple-system, system-ui, sans-serif;
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.qz-bm-item {
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.qz-bm-dropzone {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px dashed rgba(193,71,255,0.55);
+  border-radius: 4px;
+  color: #E8B6FF;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  animation: qz-pulse 1.6s ease-in-out infinite;
+}
+@keyframes qz-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+.qz-drag-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.qz-bookmarklet {
+  /* Inherits .btn-bookmarklet from earlier section */
+  position: relative;
+  z-index: 2;
+}
+.qz-drag-arrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.3px;
+  animation: qz-bounce 1.4s ease-in-out infinite;
+}
+@keyframes qz-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ----- Step 2: browser mock ----- */
+.qz-browser-frame {
+  background: #1a1b24;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+  position: relative;
+}
+.qz-tab-bar {
+  display: flex; align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.30);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.qz-traffic {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.qz-r { background: #FF5F56; }
+.qz-y { background: #FFBD2E; }
+.qz-g { background: #27C93F; }
+.qz-url-bar {
+  flex: 1;
+  background: rgba(255,255,255,0.07);
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.78);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+.qz-bookmark-bar.qz-mini {
+  margin: 0;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  font-size: 10.5px;
+  position: relative;
+}
+.qz-bm-target {
+  background: linear-gradient(135deg, #FFB454, #FF6B6B 50%, #C147FF) !important;
+  color: white !important;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px rgba(193, 71, 255, 0.35);
+  animation: qz-target-pulse 1.6s ease-in-out infinite;
+}
+@keyframes qz-target-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(193, 71, 255, 0.20); }
+  50%      { box-shadow: 0 0 0 6px rgba(193, 71, 255, 0.40); }
+}
+.qz-cursor {
+  position: absolute;
+  font-size: 18px;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  margin-left: -10px;
+  margin-top: 8px;
+  animation: qz-cursor-tap 1.6s ease-in-out infinite;
+}
+@keyframes qz-cursor-tap {
+  0%, 70%, 100% { transform: translateY(0) scale(1); }
+  80%           { transform: translateY(-3px) scale(0.85); }
+}
+.qz-quizlet-page {
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #0c0e1a, #110e1a);
+}
+.qz-quizlet-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 8px;
+}
+.qz-quizlet-card {
+  display: flex; gap: 14px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.75);
+}
+.qz-q-term { font-weight: 700; flex: 0 0 35%; }
+.qz-q-def  { color: rgba(255,255,255,0.55); }
+.qz-banner {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: linear-gradient(135deg, #FFB454, #FF6B6B 50%, #C147FF);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(193, 71, 255, 0.35);
+  animation: qz-banner-in 1.8s ease-in-out infinite;
+}
+@keyframes qz-banner-in {
+  0%, 80%, 100% { transform: translateY(0); opacity: 1; }
+  90%           { transform: translateY(-2px); opacity: 0.85; }
+}
+
+/* ----- Step 3: StudyDeck landing mock ----- */
+.qz-sd-card {
+  background: rgba(28,28,30,0.85);
+  border: 1px solid rgba(193,71,255,0.30);
+  border-radius: 16px;
+  padding: 20px 24px;
+  text-align: center;
+  position: relative;
+}
+.qz-sd-eyebrow {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  background: rgba(193, 71, 255, 0.18);
+  color: #E8B6FF;
+  border: 1px solid rgba(193, 71, 255, 0.30);
+  margin-bottom: 10px;
+}
+.qz-sd-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #FFB454 0%, #FF6B6B 50%, #C147FF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 14px;
+}
+.qz-sd-btn {
+  display: inline-block;
+  padding: 9px 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #FFB454 0%, #FF6B6B 50%, #C147FF 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(193, 71, 255, 0.40);
+  position: relative;
+}
+.qz-cursor-bottom {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+}
+
+/* ----- Tips disclosure ----- */
+.qz-tips {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 4px 14px;
+}
+.qz-tips-summary {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.62);
+  cursor: pointer;
+  padding: 10px 0;
+  list-style: none;
+  user-select: none;
+}
+.qz-tips-summary::-webkit-details-marker { display: none; }
+.qz-tips-summary:hover { color: rgba(255,255,255,0.85); }
+.qz-tips-body {
+  padding: 4px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.55;
+}
+.qz-tip code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  padding: 1px 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  color: rgba(255,255,255,0.80);
+}
+.qz-tip strong { color: rgba(255,255,255,0.85); font-weight: 700; }
+
+/* Hide the older v1 modal pieces if they leak in */
+.quizlet-import-v2 .quizlet-easy { display: none; }

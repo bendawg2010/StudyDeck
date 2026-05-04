@@ -262,61 +262,79 @@
   // One-click Quizlet importer. Scrapes the page the user is already on,
   // writes tab-separated cards to clipboard, and opens StudyDeck's
   // /#/import-quizlet route so the user can paste with one click.
-  const QUIZLET_SCRAPER = "(async()=>{const cards=[],seen=new Set();const dec=s=>{try{return JSON.parse('\"'+s+'\"')}catch(e){return s}};const add=(t,d)=>{t=String(t||'').trim();d=String(d||'').trim();if(!t||!d)return;const k=t+'||'+d;if(seen.has(k))return;seen.add(k);cards.push({t,d})};const nd=document.getElementById('__NEXT_DATA__');if(nd){try{const data=JSON.parse(nd.textContent);const walk=o=>{if(!o||typeof o!=='object')return;if(Array.isArray(o))return o.forEach(walk);if(typeof o.word==='string'&&typeof o.definition==='string')add(o.word,o.definition);if(typeof o.term==='string'&&typeof o.definition==='string')add(o.term,o.definition);for(const k in o)walk(o[k])};walk(data)}catch(e){}}if(!cards.length){document.querySelectorAll('script').forEach(s=>{const txt=s.textContent||'';const re=/\"word\":\"((?:[^\"\\\\]|\\\\.)*)\",\"definition\":\"((?:[^\"\\\\]|\\\\.)*)\"/g;for(const m of txt.matchAll(re))add(dec(m[1]),dec(m[2]))})}if(!cards.length){document.querySelectorAll('[class*=\"erm-content\"],[class*=\"SetPageTerm\"],li[id*=\"term\"]').forEach(node=>{const t=[];node.querySelectorAll('span,div,p').forEach(c=>{const x=(c.innerText||'').trim();if(x&&x.length<800&&!t.includes(x))t.push(x)});if(t.length>=2)add(t[0],t[1])})}if(!cards.length){alert('StudyDeck: No cards found on this page.\\n\\nMake sure you\\u2019re viewing the FULL set page (not a study mode), then try again.');return}const out=cards.map(c=>c.t+'\\t'+c.d).join('\\n');let copied=false;try{await navigator.clipboard.writeText(out);copied=true}catch(e){}const url='https://studydeck.pages.dev/#/import-quizlet?n='+cards.length+(copied?'&c=1':'');try{window.open(url,'_blank')}catch(e){}if(!copied){const w=window.open('','_blank');if(w){w.document.body.style.cssText='font:14px monospace;white-space:pre;padding:20px;background:#111;color:#eee';w.document.body.textContent=out;w.document.title='StudyDeck \\u2014 copy this and paste into StudyDeck'}}})();";
+  const QUIZLET_SCRAPER = "(async()=>{const c=[],S=new Set(),D=s=>{try{return JSON.parse('\"'+s+'\"')}catch(e){return s}},A=(t,d)=>{t=String(t||'').trim().replace(/\\s+/g,' ');d=String(d||'').trim().replace(/\\s+/g,' ');if(!t||!d||t.length>500||d.length>2000)return;const k=t+'\\u0000'+d;if(S.has(k))return;S.add(k);c.push({t,d})};const b=document.createElement('div');b.style.cssText='position:fixed;top:18px;right:18px;z-index:2147483647;background:linear-gradient(135deg,#FFB454,#FF6B6B,#C147FF);color:white;padding:14px 22px;border-radius:12px;font:600 14px -apple-system,system-ui;box-shadow:0 12px 32px rgba(0,0,0,.45);max-width:380px';b.textContent='StudyDeck: scanning page\\u2026';document.body.appendChild(b);const nd=document.getElementById('__NEXT_DATA__');if(nd){try{const W=o=>{if(!o||typeof o!=='object')return;if(Array.isArray(o))return o.forEach(W);if(typeof o.word==='string'&&typeof o.definition==='string')A(o.word,o.definition);if(typeof o.term==='string'&&typeof o.definition==='string')A(o.term,o.definition);if(o.cardSides){const s=Array.isArray(o.cardSides)?o.cardSides:Object.values(o.cardSides);if(s.length>=2){const t=s[0]&&(s[0].text||s[0].content),d=s[1]&&(s[1].text||s[1].content);if(t&&d)A(t,d)}}for(const k in o)W(o[k])};W(JSON.parse(nd.textContent))}catch(e){}}if(c.length<3){document.querySelectorAll('script').forEach(s=>{const x=s.textContent||'',re=/\"word\":\"((?:[^\"\\\\]|\\\\.)*)\",\"definition\":\"((?:[^\"\\\\]|\\\\.)*)\"/g;for(const m of x.matchAll(re))A(D(m[1]),D(m[2]))})}b.textContent='StudyDeck: loading lazy cards\\u2026';let lh=0;for(let i=0;i<14;i++){window.scrollTo(0,document.body.scrollHeight);await new Promise(r=>setTimeout(r,350));if(document.body.scrollHeight===lh)break;lh=document.body.scrollHeight}window.scrollTo(0,0);['[class*=\"SetPageTerm\"]','[class*=\"erm-content\"]','li[id*=\"term\"]','[data-testid*=\"term\"]','.TermText'].forEach(sel=>{document.querySelectorAll(sel).forEach(n=>{const t=[];n.querySelectorAll('span,div,p,button').forEach(e=>{const x=(e.innerText||'').trim();if(x&&x.length<1500&&!t.includes(x))t.push(x)});if(t.length>=2)A(t[0],t[1])})});if(!c.length){b.textContent='StudyDeck: no cards found. Are you on the full set page (with all terms visible)?';b.style.background='#FF3B30';setTimeout(()=>b.remove(),6000);return}const out=c.map(o=>o.t+'\\t'+o.d).join('\\n');let cp=false;try{await navigator.clipboard.writeText(out);cp=true}catch(e){}b.textContent='StudyDeck: got '+c.length+' cards! Opening\\u2026';setTimeout(()=>b.remove(),2500);const url='https://studydeck.pages.dev/#/import-quizlet?n='+c.length+(cp?'&c=1':'');try{window.open(url,'_blank')}catch(e){}if(!cp){const w=window.open('','_blank');if(w){w.document.body.style.cssText='font:14px monospace;white-space:pre;padding:20px;background:#111;color:#eee';w.document.body.textContent=out;w.document.title='StudyDeck \\u2014 copy this'}}})();";
 
   // The same script but URL-encoded as a javascript: bookmarklet
   const QUIZLET_BOOKMARKLET = "javascript:" + encodeURIComponent(QUIZLET_SCRAPER);
 
   function openQuizletImportModal() {
-    const body = global.app.el('div', { class: 'quizlet-import' });
+    const body = global.app.el('div', { class: 'quizlet-import-v2' });
 
-    // ============== THE EASY WAY: bookmarklet ==============
-    const easy = global.app.el('div', { class: 'quizlet-easy' });
-    easy.appendChild(global.app.el('div', { class: 'quizlet-step-num', text: '1' }));
-    const easyMain = global.app.el('div', { class: 'quizlet-step-body' });
-    easyMain.appendChild(global.app.el('div', {
-      class: 'quizlet-step-title',
-      text: 'Drag this button to your bookmarks bar'
-    }));
-    easyMain.appendChild(global.app.el('div', {
-      class: 'quizlet-step-sub',
-      text: 'You only do this once. (If you don’t see your bookmarks bar: ' +
-            'Cmd+Shift+B on Mac, Ctrl+Shift+B on Windows.)'
-    }));
-    const dragBtn = global.app.el('a', {
-      class: 'btn btn-bookmarklet',
-      href: QUIZLET_BOOKMARKLET,
-      draggable: 'true',
-      title: 'Drag me to your bookmarks bar',
-      text: 'Send to StudyDeck'
-    });
-    // Block actual click — clicking it on this page does nothing useful.
-    dragBtn.addEventListener('click', function (ev) {
-      ev.preventDefault();
-      global.app.toast('Drag this button to your bookmarks bar instead of clicking it', 'info');
-    });
-    easyMain.appendChild(dragBtn);
-    easy.appendChild(easyMain);
-    body.appendChild(easy);
+    // ============== Intro line ==============
+    const intro = global.app.el('div', { class: 'qz-intro' });
+    intro.textContent = 'Quizlet removed export — so we use a one-click bookmark instead. Two-minute setup, then a single click forever after.';
+    body.appendChild(intro);
 
-    const easy2 = global.app.el('div', { class: 'quizlet-easy' });
-    easy2.appendChild(global.app.el('div', { class: 'quizlet-step-num', text: '2' }));
-    const easy2Main = global.app.el('div', { class: 'quizlet-step-body' });
-    easy2Main.appendChild(global.app.el('div', {
-      class: 'quizlet-step-title',
-      text: 'On any Quizlet set page, click your new bookmark'
+    // ============== Step 1: drag to bookmarks bar ==============
+    body.appendChild(makeStep({
+      num: 1,
+      title: 'Drag this button to your bookmarks bar',
+      sub: 'It becomes a "Send to StudyDeck" bookmark — set up once.',
+      visual: makeStep1Visual(),
+      help: 'Don’t see your bookmarks bar? Press <kbd>⌘⇧B</kbd> (Mac) or <kbd>Ctrl+Shift+B</kbd> (Windows).'
     }));
-    easy2Main.appendChild(global.app.el('div', {
-      class: 'quizlet-step-sub',
-      text: 'StudyDeck will pop open with your cards ready to import. That’s it.'
+
+    // ============== Step 2: visit Quizlet, click bookmark ==============
+    body.appendChild(makeStep({
+      num: 2,
+      title: 'On any Quizlet set page, click that bookmark',
+      sub: 'A coloured banner appears top-right while it scans, then everything copies and StudyDeck reopens.',
+      visual: makeStep2Visual()
     }));
-    easy2.appendChild(easy2Main);
-    body.appendChild(easy2);
+
+    // ============== Step 3: confirm import ==============
+    body.appendChild(makeStep({
+      num: 3,
+      title: 'Hit "Import N cards" — they’re saved',
+      sub: 'You’ll land in the editor with the new set ready to play.',
+      visual: makeStep3Visual()
+    }));
+
+    // ============== Tips ==============
+    const tips = global.app.el('details', { class: 'qz-tips' });
+    const tipsSummary = global.app.el('summary', { class: 'qz-tips-summary', text: 'Got fewer cards than your set has? Tap here ▾' });
+    tips.appendChild(tipsSummary);
+    const tipsBody = global.app.el('div', { class: 'qz-tips-body' });
+    [
+      'Make sure you’re on the **full set page** (the URL ends in `/flash-cards`), not a study mode like Learn or Match.',
+      'For very long sets (50+ cards), let the page sit for a couple seconds before clicking the bookmark — the script auto-scrolls but waits 350 ms per chunk.',
+      'Some Quizlet sets hide the term list behind a "View all" button. Click that first.',
+      'If the colored banner says "no cards found", refresh the Quizlet page and try again.'
+    ].forEach(function (tip) {
+      const li = global.app.el('div', { class: 'qz-tip' });
+      // Render with simple **bold** support (build via DOM, no innerHTML)
+      const parts = tip.split(/\*\*(.*?)\*\*/g);
+      parts.forEach(function (p, i) {
+        if (i % 2 === 1) {
+          li.appendChild(global.app.el('strong', { text: p }));
+        } else {
+          // backtick → <code>
+          const segs = p.split(/`(.*?)`/g);
+          segs.forEach(function (s, j) {
+            if (j % 2 === 1) li.appendChild(global.app.el('code', { text: s }));
+            else if (s) li.appendChild(document.createTextNode(s));
+          });
+        }
+      });
+      tipsBody.appendChild(li);
+    });
+    tips.appendChild(tipsBody);
+    body.appendChild(tips);
 
     // ============== Fallback: paste cards directly ==============
     const fallbackToggle = global.app.el('button', {
       class: 'quizlet-fallback-toggle',
-      text: 'Bookmarklet not your thing? Paste cards manually ▾'
+      text: 'Got cards in a different format? Paste them manually ▾'
     });
     body.appendChild(fallbackToggle);
 
@@ -324,12 +342,11 @@
     fallbackToggle.addEventListener('click', function () {
       fallback.classList.toggle('hidden');
       fallbackToggle.textContent = fallback.classList.contains('hidden')
-        ? 'Bookmarklet not your thing? Paste cards manually ▾'
+        ? 'Got cards in a different format? Paste them manually ▾'
         : 'Hide manual paste ▴';
     });
     body.appendChild(fallback);
 
-    // Help (collapsed under the toggle)
     const help = global.app.el('div', { class: 'quizlet-help' });
     const helpTitle = global.app.el('div', {
       class: 'quizlet-help-title',
@@ -489,6 +506,129 @@
         }
       ]
     });
+  }
+
+  // ===================== Modal step helpers =====================
+
+  function makeStep(opts) {
+    const wrap = global.app.el('div', { class: 'qz-step' });
+
+    const head = global.app.el('div', { class: 'qz-step-head' });
+    head.appendChild(global.app.el('div', { class: 'qz-step-num', text: String(opts.num) }));
+    const headText = global.app.el('div', { class: 'qz-step-headtext' });
+    headText.appendChild(global.app.el('div', { class: 'qz-step-title', text: opts.title }));
+    if (opts.sub) headText.appendChild(global.app.el('div', { class: 'qz-step-sub', text: opts.sub }));
+    head.appendChild(headText);
+    wrap.appendChild(head);
+
+    if (opts.visual) wrap.appendChild(opts.visual);
+
+    if (opts.help) {
+      const help = global.app.el('div', { class: 'qz-step-help' });
+      // Render with <kbd> support (textContent for safety, then post-process)
+      const parts = opts.help.split(/<kbd>(.*?)<\/kbd>/g);
+      parts.forEach(function (p, i) {
+        if (i % 2 === 1) help.appendChild(global.app.el('kbd', { text: p }));
+        else if (p) help.appendChild(document.createTextNode(p));
+      });
+      wrap.appendChild(help);
+    }
+    return wrap;
+  }
+
+  // Visual mock: Chrome browser bar with bookmarks bar + a draggable
+  // "Send to StudyDeck" pill being dragged onto the bar.
+  function makeStep1Visual() {
+    const v = global.app.el('div', { class: 'qz-visual qz-v1' });
+
+    // Mock bookmarks bar
+    const bar = global.app.el('div', { class: 'qz-bookmark-bar' });
+    bar.appendChild(global.app.el('span', { class: 'qz-bm-item', text: '★ Gmail' }));
+    bar.appendChild(global.app.el('span', { class: 'qz-bm-item', text: '★ YouTube' }));
+    bar.appendChild(global.app.el('span', { class: 'qz-bm-item', text: '★ Drive' }));
+    const dropzone = global.app.el('span', { class: 'qz-bm-dropzone', text: 'drop here →' });
+    bar.appendChild(dropzone);
+    v.appendChild(bar);
+
+    // The actual draggable bookmarklet button
+    const dragRow = global.app.el('div', { class: 'qz-drag-row' });
+    const dragBtn = global.app.el('a', {
+      class: 'btn btn-bookmarklet qz-bookmarklet',
+      href: QUIZLET_BOOKMARKLET,
+      draggable: 'true',
+      title: 'Drag me to your bookmarks bar',
+      text: 'Send to StudyDeck'
+    });
+    dragBtn.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      global.app.toast('Drag this to your bookmarks bar — clicking it here does nothing useful', 'info');
+    });
+    dragRow.appendChild(dragBtn);
+
+    const arrow = global.app.el('div', { class: 'qz-drag-arrow', text: '↑ drag me up' });
+    dragRow.appendChild(arrow);
+
+    v.appendChild(dragRow);
+    return v;
+  }
+
+  // Visual mock: Quizlet URL bar + a corner badge showing the bookmark click.
+  function makeStep2Visual() {
+    const v = global.app.el('div', { class: 'qz-visual qz-v2' });
+
+    const browser = global.app.el('div', { class: 'qz-browser-frame' });
+
+    const tabBar = global.app.el('div', { class: 'qz-tab-bar' });
+    tabBar.appendChild(global.app.el('span', { class: 'qz-traffic qz-r' }));
+    tabBar.appendChild(global.app.el('span', { class: 'qz-traffic qz-y' }));
+    tabBar.appendChild(global.app.el('span', { class: 'qz-traffic qz-g' }));
+    const urlBar = global.app.el('span', { class: 'qz-url-bar' });
+    urlBar.appendChild(global.app.el('span', { class: 'qz-url-lock', text: '🔒' }));
+    urlBar.appendChild(global.app.el('span', { class: 'qz-url-text', text: 'quizlet.com/.../flash-cards' }));
+    tabBar.appendChild(urlBar);
+    browser.appendChild(tabBar);
+
+    const subBar = global.app.el('div', { class: 'qz-bookmark-bar qz-mini' });
+    subBar.appendChild(global.app.el('span', { class: 'qz-bm-item' }, 'Gmail'));
+    subBar.appendChild(global.app.el('span', { class: 'qz-bm-item' }, 'Drive'));
+    const target = global.app.el('span', { class: 'qz-bm-item qz-bm-target', text: 'Send to StudyDeck' });
+    subBar.appendChild(target);
+    const cursor = global.app.el('span', { class: 'qz-cursor', text: '▲' });
+    subBar.appendChild(cursor);
+    browser.appendChild(subBar);
+
+    const page = global.app.el('div', { class: 'qz-quizlet-page' });
+    page.appendChild(global.app.el('div', { class: 'qz-quizlet-title', text: 'AP Bio · Cell Components' }));
+    const card1 = global.app.el('div', { class: 'qz-quizlet-card' });
+    card1.appendChild(global.app.el('span', { class: 'qz-q-term', text: 'Mitochondria' }));
+    card1.appendChild(global.app.el('span', { class: 'qz-q-def', text: 'Powerhouse of the cell' }));
+    page.appendChild(card1);
+    const card2 = global.app.el('div', { class: 'qz-quizlet-card' });
+    card2.appendChild(global.app.el('span', { class: 'qz-q-term', text: 'Ribosomes' }));
+    card2.appendChild(global.app.el('span', { class: 'qz-q-def', text: 'Site of protein synthesis' }));
+    page.appendChild(card2);
+    browser.appendChild(page);
+
+    // Top-right banner
+    const banner = global.app.el('div', { class: 'qz-banner', text: 'StudyDeck: got 28 cards! Opening…' });
+    browser.appendChild(banner);
+
+    v.appendChild(browser);
+    return v;
+  }
+
+  // Visual mock: StudyDeck landing page with the import button.
+  function makeStep3Visual() {
+    const v = global.app.el('div', { class: 'qz-visual qz-v3' });
+    const card = global.app.el('div', { class: 'qz-sd-card' });
+    card.appendChild(global.app.el('div', { class: 'qz-sd-eyebrow', text: 'Quizlet → StudyDeck' }));
+    card.appendChild(global.app.el('div', { class: 'qz-sd-title', text: 'We grabbed 28 cards from Quizlet.' }));
+    const btn = global.app.el('div', { class: 'qz-sd-btn', text: 'Import 28 cards' });
+    card.appendChild(btn);
+    const cursor = global.app.el('span', { class: 'qz-cursor qz-cursor-bottom', text: '▲' });
+    card.appendChild(cursor);
+    v.appendChild(card);
+    return v;
   }
 
   function makeSelect(options, defaultId) {
