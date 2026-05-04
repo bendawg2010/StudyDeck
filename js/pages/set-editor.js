@@ -88,6 +88,7 @@
     rail.appendChild(buildPlayBtn('flashcards', 'Flashcards', 'Classic flip cards', flashIcon()));
     rail.appendChild(buildPlayBtn('match',      'Match',      'Race the clock',      matchIcon()));
     rail.appendChild(buildPlayBtn('blocks',     'Falling Blocks', 'Type to defuse',  blocksIcon()));
+    rail.appendChild(buildPlayBtn('blockblast', 'Block Blast',    'Drag · clear · learn', blockBlastIcon()));
     rail.appendChild(buildPlayBtn('test',       'Test',       'Mixed quiz',          testIcon()));
 
     // ---- behaviors ----
@@ -330,6 +331,16 @@
       'M6 11h4v4H6z',
       'M14 11h4v4h-4z',
       'M3 21h18'
+    ], { size: 18, weight: 1.8 });
+  }
+  function blockBlastIcon() {
+    return global.app.svgIcon([
+      'M3 3h6v6H3z',
+      'M11 3h4v4h-4z',
+      'M17 3h4v4h-4z',
+      'M3 11h4v4H3z',
+      'M3 17h4v4H3z',
+      'M9 11h12'
     ], { size: 18, weight: 1.8 });
   }
   function testIcon() {

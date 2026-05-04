@@ -100,9 +100,11 @@
     const keyhint = global.app.el('div', { class: 'fc-keyhint' });
     const hintParts = [
       ['Space', 'flip'],
+      ['F', 'flip'],
       ['← →', 'navigate'],
-      ['A', 'knew it'],
-      ['S', 'study again']
+      ['↑', 'knew it'],
+      ['↓', 'study again'],
+      ['Shuffle', 'press U']
     ];
     hintParts.forEach(function (p, i) {
       keyhint.appendChild(global.app.el('kbd', { text: p[0] }));
@@ -212,11 +214,21 @@
     }
 
     function onKey(e) {
-      if (e.key === ' ') { e.preventDefault(); flip(); }
+      // Quizlet-style shortcuts: Space/F to flip, ←→ to navigate,
+      // ↑ "I knew it", ↓ "study again", U to shuffle, A/S as legacy aliases.
+      if (e.key === ' ' || e.key === 'f' || e.key === 'F') {
+        e.preventDefault(); flip();
+      }
       else if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
-      else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+      else if (e.key === 'ArrowLeft')  { e.preventDefault(); prev(); }
+      else if (e.key === 'ArrowUp')    { e.preventDefault(); judgeCard(true); }
+      else if (e.key === 'ArrowDown')  { e.preventDefault(); judgeCard(false); }
       else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); judgeCard(true); }
       else if (e.key === 's' || e.key === 'S') { e.preventDefault(); judgeCard(false); }
+      else if (e.key === 'u' || e.key === 'U') {
+        e.preventDefault();
+        shuffleToggle.click();
+      }
     }
     document.addEventListener('keydown', onKey);
     fcCard.focus();

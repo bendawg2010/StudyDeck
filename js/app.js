@@ -358,8 +358,10 @@
     { match: /^#\/play\/flashcards\/([^/]+)$/, handler: function (m) { return pages.flashcards.render(getHost(), m[1]); } },
     { match: /^#\/play\/match\/([^/]+)$/,      handler: function (m) { return pages.match.render(getHost(), m[1]); } },
     { match: /^#\/play\/blocks\/([^/]+)$/,     handler: function (m) { return pages.blocks.render(getHost(), m[1]); } },
+    { match: /^#\/play\/blockblast\/([^/]+)$/, handler: function (m) { return pages.blockblast.render(getHost(), m[1]); } },
     { match: /^#\/play\/test\/([^/]+)$/,       handler: function (m) { return pages.test.render(getHost(), m[1]); } },
-    { match: /^#\/results$/,                   handler: function () { return pages.results.render(getHost()); } }
+    { match: /^#\/results$/,                   handler: function () { return pages.results.render(getHost()); } },
+    { match: /^#\/import-quizlet/,             handler: function () { return pages.home.renderQuizletLanding(getHost()); } }
   ];
 
   function getHost() {
@@ -453,6 +455,7 @@
     pages.flashcards = global.FlashcardsPage;
     pages.match = global.MatchPage;
     pages.blocks = global.BlocksPage;
+    pages.blockblast = global.BlockBlastPage;
     pages.test = global.TestPage;
     pages.results = global.ResultsPage;
 

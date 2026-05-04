@@ -24,6 +24,7 @@
       switch (r.mode) {
         case 'match': return 'Match · ' + (r.setTitle || '');
         case 'blocks': return 'Falling Blocks · ' + (r.setTitle || '');
+        case 'blockblast': return 'Block Blast · ' + (r.setTitle || '');
         case 'test': return 'Test · ' + (r.setTitle || '');
         case 'flashcards': return 'Flashcards · ' + (r.setTitle || '');
         default: return r.setTitle || 'Result';
@@ -41,6 +42,11 @@
       bigVal = String(r.score || 0);
       subtitle = (r.score || 0) + (r.score === 1 ? ' correct match' : ' correct matches');
       if (r.score >= 20) isPerfect = true;
+    } else if (r.mode === 'blockblast') {
+      bigVal = String(r.score || 0);
+      const accPart = (r.accuracy != null) ? ' · ' + r.accuracy + '% quiz accuracy' : '';
+      subtitle = 'Final score' + accPart;
+      if (r.score >= 500) isPerfect = true;
     } else if (r.mode === 'test') {
       bigVal = (r.score || 0) + '/' + (r.scoreMax || 0);
       subtitle = (r.accuracy || 0) + '% accuracy';

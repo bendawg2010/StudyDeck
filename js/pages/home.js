@@ -135,6 +135,7 @@
       { label: 'Play › Flashcards', onClick: function () { global.app.navigate('#/play/flashcards/' + encodeURIComponent(set.id)); } },
       { label: 'Play › Match',      onClick: function () { global.app.navigate('#/play/match/' + encodeURIComponent(set.id)); } },
       { label: 'Play › Blocks',     onClick: function () { global.app.navigate('#/play/blocks/' + encodeURIComponent(set.id)); } },
+      { label: 'Play › Block Blast', onClick: function () { global.app.navigate('#/play/blockblast/' + encodeURIComponent(set.id)); } },
       { label: 'Play › Test',       onClick: function () { global.app.navigate('#/play/test/' + encodeURIComponent(set.id)); } },
       { divider: true },
       { label: 'Export JSON', onClick: async function () {
@@ -258,28 +259,87 @@
     { id: 'custom',  label: 'Custom…',               value: 'custom' },
   ];
 
+  // One-click Quizlet importer. Scrapes the page the user is already on,
+  // writes tab-separated cards to clipboard, and opens StudyDeck's
+  // /#/import-quizlet route so the user can paste with one click.
+  const QUIZLET_SCRAPER = "(async()=>{const cards=[],seen=new Set();const dec=s=>{try{return JSON.parse('\"'+s+'\"')}catch(e){return s}};const add=(t,d)=>{t=String(t||'').trim();d=String(d||'').trim();if(!t||!d)return;const k=t+'||'+d;if(seen.has(k))return;seen.add(k);cards.push({t,d})};const nd=document.getElementById('__NEXT_DATA__');if(nd){try{const data=JSON.parse(nd.textContent);const walk=o=>{if(!o||typeof o!=='object')return;if(Array.isArray(o))return o.forEach(walk);if(typeof o.word==='string'&&typeof o.definition==='string')add(o.word,o.definition);if(typeof o.term==='string'&&typeof o.definition==='string')add(o.term,o.definition);for(const k in o)walk(o[k])};walk(data)}catch(e){}}if(!cards.length){document.querySelectorAll('script').forEach(s=>{const txt=s.textContent||'';const re=/\"word\":\"((?:[^\"\\\\]|\\\\.)*)\",\"definition\":\"((?:[^\"\\\\]|\\\\.)*)\"/g;for(const m of txt.matchAll(re))add(dec(m[1]),dec(m[2]))})}if(!cards.length){document.querySelectorAll('[class*=\"erm-content\"],[class*=\"SetPageTerm\"],li[id*=\"term\"]').forEach(node=>{const t=[];node.querySelectorAll('span,div,p').forEach(c=>{const x=(c.innerText||'').trim();if(x&&x.length<800&&!t.includes(x))t.push(x)});if(t.length>=2)add(t[0],t[1])})}if(!cards.length){alert('StudyDeck: No cards found on this page.\\n\\nMake sure you\\u2019re viewing the FULL set page (not a study mode), then try again.');return}const out=cards.map(c=>c.t+'\\t'+c.d).join('\\n');let copied=false;try{await navigator.clipboard.writeText(out);copied=true}catch(e){}const url='https://studydeck.pages.dev/#/import-quizlet?n='+cards.length+(copied?'&c=1':'');try{window.open(url,'_blank')}catch(e){}if(!copied){const w=window.open('','_blank');if(w){w.document.body.style.cssText='font:14px monospace;white-space:pre;padding:20px;background:#111;color:#eee';w.document.body.textContent=out;w.document.title='StudyDeck \\u2014 copy this and paste into StudyDeck'}}})();";
+
+  // The same script but URL-encoded as a javascript: bookmarklet
+  const QUIZLET_BOOKMARKLET = "javascript:" + encodeURIComponent(QUIZLET_SCRAPER);
+
   function openQuizletImportModal() {
     const body = global.app.el('div', { class: 'quizlet-import' });
 
-    // How-to strip
+    // ============== THE EASY WAY: bookmarklet ==============
+    const easy = global.app.el('div', { class: 'quizlet-easy' });
+    easy.appendChild(global.app.el('div', { class: 'quizlet-step-num', text: '1' }));
+    const easyMain = global.app.el('div', { class: 'quizlet-step-body' });
+    easyMain.appendChild(global.app.el('div', {
+      class: 'quizlet-step-title',
+      text: 'Drag this button to your bookmarks bar'
+    }));
+    easyMain.appendChild(global.app.el('div', {
+      class: 'quizlet-step-sub',
+      text: 'You only do this once. (If you don’t see your bookmarks bar: ' +
+            'Cmd+Shift+B on Mac, Ctrl+Shift+B on Windows.)'
+    }));
+    const dragBtn = global.app.el('a', {
+      class: 'btn btn-bookmarklet',
+      href: QUIZLET_BOOKMARKLET,
+      draggable: 'true',
+      title: 'Drag me to your bookmarks bar',
+      text: 'Send to StudyDeck'
+    });
+    // Block actual click — clicking it on this page does nothing useful.
+    dragBtn.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      global.app.toast('Drag this button to your bookmarks bar instead of clicking it', 'info');
+    });
+    easyMain.appendChild(dragBtn);
+    easy.appendChild(easyMain);
+    body.appendChild(easy);
+
+    const easy2 = global.app.el('div', { class: 'quizlet-easy' });
+    easy2.appendChild(global.app.el('div', { class: 'quizlet-step-num', text: '2' }));
+    const easy2Main = global.app.el('div', { class: 'quizlet-step-body' });
+    easy2Main.appendChild(global.app.el('div', {
+      class: 'quizlet-step-title',
+      text: 'On any Quizlet set page, click your new bookmark'
+    }));
+    easy2Main.appendChild(global.app.el('div', {
+      class: 'quizlet-step-sub',
+      text: 'StudyDeck will pop open with your cards ready to import. That’s it.'
+    }));
+    easy2.appendChild(easy2Main);
+    body.appendChild(easy2);
+
+    // ============== Fallback: paste cards directly ==============
+    const fallbackToggle = global.app.el('button', {
+      class: 'quizlet-fallback-toggle',
+      text: 'Bookmarklet not your thing? Paste cards manually ▾'
+    });
+    body.appendChild(fallbackToggle);
+
+    const fallback = global.app.el('div', { class: 'quizlet-fallback hidden' });
+    fallbackToggle.addEventListener('click', function () {
+      fallback.classList.toggle('hidden');
+      fallbackToggle.textContent = fallback.classList.contains('hidden')
+        ? 'Bookmarklet not your thing? Paste cards manually ▾'
+        : 'Hide manual paste ▴';
+    });
+    body.appendChild(fallback);
+
+    // Help (collapsed under the toggle)
     const help = global.app.el('div', { class: 'quizlet-help' });
     const helpTitle = global.app.el('div', {
       class: 'quizlet-help-title',
-      text: 'Paste a Quizlet Export'
+      text: 'Paste cards in any format'
     });
     help.appendChild(helpTitle);
-    const helpSteps = global.app.el('ol', { class: 'quizlet-help-steps' });
-    [
-      'Open your set on Quizlet → click the ⋯ menu → Export',
-      'Pick any term/card separators you like (or keep the defaults)',
-      'Click "Copy text", come back here, and paste below',
-    ].forEach(function (txt) {
-      const li = global.app.el('li');
-      li.textContent = txt;
-      helpSteps.appendChild(li);
-    });
-    help.appendChild(helpSteps);
-    body.appendChild(help);
+    const helpHint = global.app.el('div', { class: 'quizlet-help-hint' });
+    helpHint.textContent = 'Auto-detects tab, em-dash, hyphen, semicolon, and more. Each line = one card.';
+    help.appendChild(helpHint);
+    fallback.appendChild(help);
 
     // Title
     const titleLabel = global.app.el('label', { class: 'field-label', text: 'Set title' });
@@ -351,7 +411,7 @@
         previewMeta.textContent = 'URL detected';
         clearChildren(previewList);
         const note = global.app.el('div', { class: 'quizlet-preview-empty' });
-        note.textContent = 'Quizlet blocks direct URL imports. Open the set in your browser, click ⋯ → Export → Copy text, then paste THAT here.';
+        note.textContent = 'Paste the URL into your browser instead — open the set there, then run the console script above and come back to paste the cards.';
         previewList.appendChild(note);
         detected = [];
         return;
@@ -501,5 +561,134 @@
     return text.split(sep);
   }
 
-  global.HomePage = { render: render };
+  // ===================== Quizlet landing route =====================
+  // Reached via #/import-quizlet?n=N&c=1 after the bookmarklet copies cards.
+  // Single big "Paste cards" button → reads clipboard → creates a set.
+
+  function renderQuizletLanding(host) {
+    const params = parseHashQuery();
+    const n = parseInt(params.n || '0', 10);
+    const clipboardCopied = params.c === '1';
+
+    const wrap = global.app.el('div', { class: 'quizlet-landing' });
+    const card = global.app.el('div', { class: 'quizlet-landing-card' });
+
+    const eyebrow = global.app.el('div', { class: 'quizlet-landing-eyebrow' });
+    eyebrow.textContent = 'Quizlet → StudyDeck';
+    card.appendChild(eyebrow);
+
+    const title = global.app.el('h1', { class: 'quizlet-landing-title' });
+    title.textContent = n > 0
+      ? 'We grabbed ' + n + ' cards from Quizlet.'
+      : 'Cards copied from Quizlet';
+    card.appendChild(title);
+
+    const sub = global.app.el('p', { class: 'quizlet-landing-sub' });
+    sub.textContent = clipboardCopied
+      ? 'They’re in your clipboard. One click and they’re yours.'
+      : 'They should be in your clipboard. Click below to import.';
+    card.appendChild(sub);
+
+    // Big import button
+    const importBtn = global.app.el('button', {
+      class: 'btn btn-large btn-primary quizlet-landing-btn',
+      text: 'Import' + (n > 0 ? ' ' + n + ' cards' : '')
+    });
+    importBtn.addEventListener('click', async function () {
+      try {
+        const text = await navigator.clipboard.readText();
+        await importPastedCards(text || '');
+      } catch (e) {
+        // Permission denied or no clipboard API — fallback to manual paste
+        showFallbackPaste();
+      }
+    });
+    card.appendChild(importBtn);
+
+    // Manual paste fallback
+    const fbWrap = global.app.el('div', { class: 'quizlet-landing-fallback hidden' });
+    const fbLabel = global.app.el('label', { class: 'field-label' });
+    fbLabel.textContent = 'Couldn’t read clipboard automatically — paste here instead:';
+    fbWrap.appendChild(fbLabel);
+    const fbTa = global.app.el('textarea', { class: 'quizlet-landing-ta', rows: '8' });
+    fbWrap.appendChild(fbTa);
+    const fbImport = global.app.el('button', { class: 'btn btn-primary', text: 'Import these cards' });
+    fbImport.addEventListener('click', async function () {
+      await importPastedCards(fbTa.value || '');
+    });
+    fbWrap.appendChild(fbImport);
+    card.appendChild(fbWrap);
+
+    function showFallbackPaste() {
+      fbWrap.classList.remove('hidden');
+      fbTa.focus();
+    }
+
+    // Backup link
+    const backLink = global.app.el('a', {
+      class: 'quizlet-landing-back',
+      href: '#/',
+      text: '← Back to home'
+    });
+    card.appendChild(backLink);
+
+    wrap.appendChild(card);
+    host.appendChild(wrap);
+
+    // Auto-attempt clipboard read once on load (works in some browsers
+    // without an explicit gesture, but we don't rely on it)
+    setTimeout(async function () {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text && text.indexOf('\t') !== -1) {
+          // It's tab-separated — looks like our bookmarklet's output
+          // Auto-parse but require a click to commit
+          const cards = global.app.parseTermDefText(text);
+          if (cards.length) {
+            importBtn.textContent = 'Import ' + cards.length + ' cards';
+          }
+        }
+      } catch (e) { /* clipboard API needs user gesture — that's fine */ }
+    }, 250);
+  }
+
+  async function importPastedCards(text) {
+    text = (text || '').trim();
+    if (!text) {
+      global.app.toast('Clipboard was empty — try copying again', 'error');
+      return;
+    }
+    const cards = global.app.parseTermDefText(text);
+    if (!cards.length) {
+      global.app.toast('Couldn’t parse the clipboard contents', 'error');
+      return;
+    }
+    try {
+      const id = await db.createSet({ title: 'Imported from Quizlet', description: '' });
+      await db.upsertCards(id, cards.map(function (c, i) {
+        return { term: c.term, definition: c.definition, position: i };
+      }));
+      global.app.toast('Imported ' + cards.length + ' cards', 'success');
+      global.app.navigate('#/set/' + encodeURIComponent(id));
+    } catch (e) {
+      console.error(e);
+      global.app.toast('Could not save the import', 'error');
+    }
+  }
+
+  function parseHashQuery() {
+    const hash = global.location.hash || '';
+    const q = hash.indexOf('?');
+    if (q === -1) return {};
+    const out = {};
+    hash.slice(q + 1).split('&').forEach(function (kv) {
+      const i = kv.indexOf('=');
+      const k = decodeURIComponent(i === -1 ? kv : kv.slice(0, i));
+      const v = decodeURIComponent(i === -1 ? '' : kv.slice(i + 1));
+      out[k] = v;
+    });
+    return out;
+  }
+
+  global.HomePage = { render: render, renderQuizletLanding: renderQuizletLanding };
 })(window);
