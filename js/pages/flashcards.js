@@ -125,25 +125,21 @@
     const stage = global.app.el('div', { class: 'fc2-stage' });
     page.appendChild(stage);
 
-    // Action row
+    // Action row — judge or stay. No skipping.
     const actions = global.app.el('div', { class: 'fc2-actions' });
-    const prevBtn = navBtn('M15 18l-6-6 6-6', 'Previous (←)', function () { goPrev(); });
-    const againBtn = bigJudgeBtn('study-again', '↓', 'Study again', function () { judge(false); });
-    const flipBtn  = global.app.el('button', { class: 'fc2-flip-btn', text: 'Flip · F' });
+    const againBtn = bigJudgeBtn('study-again', '←', 'Still learning', function () { judge(false); });
+    const flipBtn  = global.app.el('button', { class: 'fc2-flip-btn', text: 'Flip · ↑↓' });
     flipBtn.addEventListener('click', flip);
-    const knewBtn  = bigJudgeBtn('knew-it', '↑', 'I knew it', function () { judge(true); });
-    const nextBtn  = navBtn('M9 18l6-6-6-6', 'Next (→)', function () { goNext(); });
-    actions.appendChild(prevBtn);
+    const knewBtn  = bigJudgeBtn('knew-it', '→', 'I know it', function () { judge(true); });
     actions.appendChild(againBtn);
     actions.appendChild(flipBtn);
     actions.appendChild(knewBtn);
-    actions.appendChild(nextBtn);
     page.appendChild(actions);
 
     // Keyhint
     const keyhint = global.app.el('div', { class: 'fc2-keyhint' });
     const hintParts = [
-      ['↑↓', 'flip'], ['Space', 'flip'],
+      ['↑↓', 'flip'],
       ['→', 'I know it'], ['←', 'still learning'],
       ['.', 'star'], ['U', 'shuffle'],
     ];
@@ -181,13 +177,6 @@
           e.preventDefault(); judge(true); break;
         case 's': case 'S':
           e.preventDefault(); judge(false); break;
-        case 'n':
-        case 'N':
-          // Manual prev/next still available via N (next) / P (prev)
-          e.preventDefault(); goNext(); break;
-        case 'p':
-        case 'P':
-          e.preventDefault(); goPrev(); break;
         case 'u': case 'U':
           e.preventDefault(); tShuffle.click(); break;
         case '.':
@@ -300,7 +289,7 @@
       front.appendChild(global.app.el('div', { class: 'fc2-tip', text: 'Click or ↑ ↓ to flip' }));
       back.appendChild(global.app.el('div', { class: 'fc2-eyebrow fc2-eyebrow-back', text: termFirst ? 'DEFINITION' : 'TERM' }));
       back.appendChild(global.app.el('div', { class: 'fc2-text fc2-text-back' }));
-      back.appendChild(global.app.el('div', { class: 'fc2-tip', text: '→ I know it · ← still learning' }));
+      back.appendChild(global.app.el('div', { class: 'fc2-tip', text: '→ I know it     ← still learning' }));
       inner.appendChild(front);
       inner.appendChild(back);
       card.appendChild(inner);
