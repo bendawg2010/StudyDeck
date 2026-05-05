@@ -669,7 +669,13 @@
       function onPointerDown(e) {
         if (interactionLocked || paused || gameOverFlag) return;
         if (!piece || !trayPieces[piece.idx]) return;
+        // Only react to primary button (left-click on mouse) or any touch
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
         e.preventDefault();
+        // Decide how much to lift the piece based on input type.
+        // Touch: 1.5 cells (so finger doesn't cover the placement).
+        // Mouse / trackpad: 0 cells (cursor is exactly on the piece).
+        liftCells = isTouchPointer(e) ? 1.5 : 0;
         dragging = true;
         pointerId = e.pointerId;
         try { pieceEl.setPointerCapture(pointerId); } catch (err) {}
@@ -682,17 +688,24 @@
         pieceEl.classList.add('is-dragging-source');
       }
 
+      // Lift the piece a small fixed amount above the pointer on touch (so a
+      // finger doesn't cover what's being placed) and barely at all on mouse
+      // (where a long lift makes it impossible to see what cell maps to the
+      // cursor). The previous logic lifted by `(rows-1)*cell` which was very
+      // confusing for tall pieces.
+      const isTouchPointer = (e) => e && (e.pointerType === 'touch' || e.pointerType === 'pen');
+      let liftCells = 0; // updated on pointerdown
+
       function positionGhost(clientX, clientY) {
         if (!dragGhost) return;
         const cellSize = getCellSize();
         const bounds = shapeBounds(piece.cells);
-        // Center the ghost roughly on the cursor
         const w = bounds.cols * cellSize;
         const h = bounds.rows * cellSize;
-        // place pointer just below first cell so user can see what they're placing
-        dragGhost.style.left = (clientX - cellSize * 0.5) + 'px';
-        dragGhost.style.top = (clientY - cellSize * 0.5 - h) + 'px';
-        // Update preview on grid
+        // Center the ghost on the pointer (subtract half the bbox), then
+        // lift by `liftCells` cells so the user can still see the bottom row.
+        dragGhost.style.left = (clientX - w / 2) + 'px';
+        dragGhost.style.top  = (clientY - h / 2 - liftCells * cellSize) + 'px';
         updateGridPreview(clientX, clientY);
       }
 
@@ -705,14 +718,16 @@
       function clientToAnchor(clientX, clientY) {
         const cellSize = getCellSize();
         const gridRect = gridEl.getBoundingClientRect();
-        // The "anchor" cell is the upper-left of the piece's bbox.
-        // We want the cell under (clientX, clientY - cellSize/2 - h_offset)
         const bounds = shapeBounds(piece.cells);
-        // Choose anchor so the piece bbox top is one cell-row above pointer
-        const targetX = clientX - cellSize * 0.5;
-        const targetY = clientY - cellSize * 0.5 - (bounds.rows - 1) * cellSize;
-        const c = Math.round((targetX - gridRect.left) / cellSize);
-        const r = Math.round((targetY - gridRect.top) / cellSize);
+        // The cursor maps to the centre of the piece's bbox (with the same
+        // touch lift applied), then we convert that back to the upper-left
+        // anchor cell.
+        const w = bounds.cols * cellSize;
+        const h = bounds.rows * cellSize;
+        const bboxLeft = clientX - w / 2;
+        const bboxTop  = clientY - h / 2 - liftCells * cellSize;
+        const c = Math.round((bboxLeft - gridRect.left) / cellSize);
+        const r = Math.round((bboxTop  - gridRect.top)  / cellSize);
         return { r: r, c: c };
       }
 

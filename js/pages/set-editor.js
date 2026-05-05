@@ -86,6 +86,7 @@
     layout.appendChild(rail);
     rail.appendChild(global.app.el('h4', { class: 'rail-title', text: 'Study modes' }));
     rail.appendChild(buildPlayBtn('flashcards', 'Flashcards', 'Classic flip cards', flashIcon()));
+    rail.appendChild(buildPlayBtn('spell',      'Spell',      'Type the term',       spellIcon()));
     rail.appendChild(buildPlayBtn('match',      'Match',      'Race the clock',      matchIcon()));
     rail.appendChild(buildPlayBtn('blocks',     'Falling Blocks', 'Type to defuse',  blocksIcon()));
     rail.appendChild(buildPlayBtn('blockblast', 'Block Blast',    'Drag · clear · learn', blockBlastIcon()));
@@ -347,6 +348,13 @@
     return global.app.svgIcon([
       'M9 11l3 3 8-8',
       'M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11'
+    ], { size: 18, weight: 1.8 });
+  }
+  function spellIcon() {
+    return global.app.svgIcon([
+      'M5 7h14',
+      'M12 4v16',
+      'M9 20h6'
     ], { size: 18, weight: 1.8 });
   }
 

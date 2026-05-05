@@ -355,11 +355,12 @@
   const routes = [
     { match: /^#\/$/,                          handler: function () { return pages.home.render(getHost()); } },
     { match: /^#\/set\/([^/]+)$/,              handler: function (m) { return pages.setEditor.render(getHost(), m[1]); } },
-    { match: /^#\/play\/flashcards\/([^/]+)$/, handler: function (m) { return pages.flashcards.render(getHost(), m[1]); } },
+    { match: /^#\/play\/flashcards\/([^/?]+)(?:\?.*)?$/, handler: function (m) { return pages.flashcards.render(getHost(), m[1]); } },
     { match: /^#\/play\/match\/([^/]+)$/,      handler: function (m) { return pages.match.render(getHost(), m[1]); } },
     { match: /^#\/play\/blocks\/([^/]+)$/,     handler: function (m) { return pages.blocks.render(getHost(), m[1]); } },
     { match: /^#\/play\/blockblast\/([^/]+)$/, handler: function (m) { return pages.blockblast.render(getHost(), m[1]); } },
     { match: /^#\/play\/test\/([^/]+)$/,       handler: function (m) { return pages.test.render(getHost(), m[1]); } },
+    { match: /^#\/play\/spell\/([^/?]+)(?:\?.*)?$/, handler: function (m) { return pages.spell.render(getHost(), m[1]); } },
     { match: /^#\/results$/,                   handler: function () { return pages.results.render(getHost()); } },
     { match: /^#\/import-quizlet/,             handler: function () { return pages.home.renderQuizletLanding(getHost()); } }
   ];
@@ -453,6 +454,7 @@
     pages.home = global.HomePage;
     pages.setEditor = global.SetEditorPage;
     pages.flashcards = global.FlashcardsPage;
+    pages.spell = global.SpellPage;
     pages.match = global.MatchPage;
     pages.blocks = global.BlocksPage;
     pages.blockblast = global.BlockBlastPage;
