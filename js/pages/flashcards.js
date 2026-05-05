@@ -44,6 +44,10 @@
     let cursor = 0;              // index into deck (current card)
     let knew = 0;
     let again = 0;
+    // Cards the user said "study again" on, in encounter order. Used by the
+    // 'Review missed' shortcut on the done screen and to drive a follow-up
+    // run with only the misses.
+    let missedIds = [];
     let isFlipped = false;
     let startTime = performance.now();
     let busy = false;            // true while a fly-off animation is in flight
@@ -139,11 +143,9 @@
     // Keyhint
     const keyhint = global.app.el('div', { class: 'fc2-keyhint' });
     const hintParts = [
-      ['Space', 'flip'], ['F', 'flip'],
-      ['← →', 'prev / next'],
-      ['↑', 'knew it'], ['↓', 'study again'],
-      ['•', 'star a card'],
-      ['U', 'shuffle'],
+      ['↑↓', 'flip'], ['Space', 'flip'],
+      ['→', 'I know it'], ['←', 'still learning'],
+      ['.', 'star'], ['U', 'shuffle'],
     ];
     hintParts.forEach(function (p, i) {
       keyhint.appendChild(global.app.el('kbd', { text: p[0] }));
@@ -165,19 +167,27 @@
         case ' ':
         case 'f':
         case 'F':
+        case 'ArrowUp':
+        case 'ArrowDown':
+          // Up + Down + Space + F all flip the card (reveal/hide)
           e.preventDefault(); flip(); break;
         case 'ArrowRight':
-          e.preventDefault(); goNext(); break;
-        case 'ArrowLeft':
-          e.preventDefault(); goPrev(); break;
-        case 'ArrowUp':
+          // Right = "I know it"
           e.preventDefault(); judge(true); break;
-        case 'ArrowDown':
+        case 'ArrowLeft':
+          // Left = "Still learning" / study again
           e.preventDefault(); judge(false); break;
         case 'a': case 'A':
           e.preventDefault(); judge(true); break;
         case 's': case 'S':
           e.preventDefault(); judge(false); break;
+        case 'n':
+        case 'N':
+          // Manual prev/next still available via N (next) / P (prev)
+          e.preventDefault(); goNext(); break;
+        case 'p':
+        case 'P':
+          e.preventDefault(); goPrev(); break;
         case 'u': case 'U':
           e.preventDefault(); tShuffle.click(); break;
         case '.':
@@ -250,6 +260,7 @@
       }
       cursor = 0;
       knew = 0; again = 0;
+      missedIds = [];
       isFlipped = false;
       startTime = performance.now();
       // Wipe the current stage and rebuild
@@ -286,10 +297,10 @@
       // Eyebrow + text + tip
       front.appendChild(global.app.el('div', { class: 'fc2-eyebrow', text: termFirst ? 'TERM' : 'DEFINITION' }));
       front.appendChild(global.app.el('div', { class: 'fc2-text fc2-text-front' }));
-      front.appendChild(global.app.el('div', { class: 'fc2-tip', text: 'Click or ↑ to flip' }));
+      front.appendChild(global.app.el('div', { class: 'fc2-tip', text: 'Click or ↑ ↓ to flip' }));
       back.appendChild(global.app.el('div', { class: 'fc2-eyebrow fc2-eyebrow-back', text: termFirst ? 'DEFINITION' : 'TERM' }));
       back.appendChild(global.app.el('div', { class: 'fc2-text fc2-text-back' }));
-      back.appendChild(global.app.el('div', { class: 'fc2-tip', text: '↑ knew it · ↓ study again · → next' }));
+      back.appendChild(global.app.el('div', { class: 'fc2-tip', text: '→ I know it · ← still learning' }));
       inner.appendChild(front);
       inner.appendChild(back);
       card.appendChild(inner);
@@ -387,7 +398,13 @@
     function judge(correct) {
       if (busy) return;
       if (cursor >= deck.length) return;
-      if (correct) knew++; else again++;
+      if (correct) {
+        knew++;
+      } else {
+        again++;
+        const c = deck[cursor];
+        if (c && !missedIds.includes(c.id)) missedIds.push(c.id);
+      }
       flyOff(correct);
     }
 
@@ -521,19 +538,51 @@
 
       // Action buttons
       const acts = global.app.el('div', { class: 'fc2-done-actions' });
-      const restart = global.app.el('button', { class: 'btn btn-primary', text: '↻ Restart' });
+
+      // Review missed — primary CTA when you got things wrong
+      if (missedIds.length > 0) {
+        const reviewBtn = global.app.el('button', {
+          class: 'btn btn-primary',
+          text: '⤺ Review the ' + missedIds.length + ' you missed',
+        });
+        reviewBtn.addEventListener('click', function () {
+          // Restrict the deck to just the missed cards (preserve order)
+          const missedCards = missedIds
+            .map(function (id) { return allCards.find(function (c) { return c.id === id; }); })
+            .filter(Boolean);
+          if (!missedCards.length) { reset(); return; }
+          // Override allCards-derived deck to use the missed list.
+          // This is a small hack: temporarily swap allCards' filter via a
+          // shadow buildDeck behaviour for the next reset.
+          deck = missedCards.slice();
+          cursor = 0;
+          knew = 0; again = 0;
+          missedIds = [];
+          isFlipped = false;
+          startTime = performance.now();
+          // Rebuild the entire shell — done view replaced the toolbar
+          while (host.firstChild) host.removeChild(host.firstChild);
+          if (onKey) document.removeEventListener('keydown', onKey);
+          // Re-render via the route handler with a session flag so we don't
+          // accidentally re-run the seed shuffle.
+          location.hash = '#/play/flashcards/' + encodeURIComponent(setId) + '?missed=' + Date.now();
+        });
+        acts.appendChild(reviewBtn);
+      }
+
+      const restart = global.app.el('button', {
+        class: missedIds.length > 0 ? 'btn' : 'btn btn-primary',
+        text: '↻ Restart all',
+      });
       restart.addEventListener('click', reset);
       acts.appendChild(restart);
+
       if (hardSet.size > 0 && !hardOnly) {
         const onlyHard = global.app.el('button', { class: 'btn', text: '★ Drill hard cards (' + hardSet.size + ')' });
         onlyHard.addEventListener('click', function () {
-          // Clear the done view and re-init in hard-only mode
           while (host.firstChild) host.removeChild(host.firstChild);
-          // Tear down current key handler before re-init
           if (onKey) document.removeEventListener('keydown', onKey);
-          // Restart the page in hard-only mode via URL flag
           location.hash = '#/play/flashcards/' + encodeURIComponent(setId) + '?hard=1';
-          // The router will pick up the hash change and re-render this page
         });
         acts.appendChild(onlyHard);
       }
