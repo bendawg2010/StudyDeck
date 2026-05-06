@@ -252,6 +252,10 @@
     const params = parseHashQuery();
     const n = parseInt(params.n || '0', 10);
     const clipboardCopied = params.c === '1';
+    // The d= URL param carries the TSV directly (Safari path: avoids
+    // cross-origin clipboard hop). If present, auto-import without
+    // requiring a click — the data is right here in the URL.
+    const urlData = params.d ? String(params.d) : '';
 
     const wrap = global.app.el('div', { class: 'quizlet-landing' });
     const card = global.app.el('div', { class: 'quizlet-landing-card' });
@@ -267,10 +271,20 @@
     card.appendChild(title);
 
     const sub = global.app.el('p', { class: 'quizlet-landing-sub' });
-    sub.textContent = clipboardCopied
-      ? 'They’re in your clipboard. One click and they’re yours.'
-      : 'They should be in your clipboard. Click below to import.';
+    sub.textContent = urlData
+      ? 'Importing now — sit tight…'
+      : clipboardCopied
+        ? 'They’re in your clipboard. One click and they’re yours.'
+        : 'They should be in your clipboard. Click below to import.';
     card.appendChild(sub);
+
+    // If TSV came in on the URL, import it immediately — no click needed.
+    if (urlData) {
+      wrap.appendChild(card);
+      host.appendChild(wrap);
+      importPastedCards(urlData);
+      return;
+    }
 
     // Big import button
     const importBtn = global.app.el('button', {
