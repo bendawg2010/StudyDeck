@@ -44,6 +44,11 @@
     let cursor = 0;              // index into deck (current card)
     let knew = 0;
     let again = 0;
+    // When non-null, buildDeck() draws from this card-id list instead of
+    // allCards. This is what makes "Review missed" stick across toolbar
+    // toggles (Shuffle/Hard-only) and the R restart shortcut.
+    // 'Restart all' explicitly clears this back to null.
+    let activePoolIds = null;
     // Cards the user said "study again" on, in encounter order. Used by the
     // 'Review missed' shortcut on the done screen and to drive a follow-up
     // run with only the misses.
@@ -235,7 +240,15 @@
     }
 
     function buildDeck() {
-      let pool = allCards.slice();
+      let pool;
+      if (activePoolIds && activePoolIds.length) {
+        // Review-missed mode: draw only from the captured id list, in order.
+        pool = activePoolIds
+          .map(function (id) { return allCards.find(function (c) { return c.id === id; }); })
+          .filter(Boolean);
+      } else {
+        pool = allCards.slice();
+      }
       if (hardOnly) {
         pool = pool.filter(function (c) { return hardSet.has(c.id); });
       }
@@ -612,24 +625,16 @@
           text: '⤺ Review the ' + missedIds.length + ' you missed',
         });
         reviewBtn.addEventListener('click', function () {
-          // Restrict the deck to just the missed cards (preserve order)
-          const missedCards = missedIds
-            .map(function (id) { return allCards.find(function (c) { return c.id === id; }); })
-            .filter(Boolean);
-          // Put the play-shell back so cursor/stage have somewhere to render.
+          // Capture the missed-card pool BEFORE reset() wipes missedIds.
+          // From here on, buildDeck() draws from this list — so toolbar
+          // toggles (Shuffle, Hard-only) and the R shortcut stay inside
+          // the review subset instead of jumping back to all cards.
+          const missedSnapshot = missedIds.slice();
+          if (!missedSnapshot.length) { restorePlayShell(); reset(); return; }
+          activePoolIds = missedSnapshot;
           restorePlayShell();
-          if (!missedCards.length) { reset(); return; }
-          // Override the buildDeck-derived deck with the missed list.
-          deck = missedCards.slice();
-          cursor = 0;
-          knew = 0; again = 0;
-          missedIds = [];
-          history = [];
-          isFlipped = false;
-          startTime = performance.now();
-          while (stage.firstChild) stage.removeChild(stage.firstChild);
-          buildStage();
-          repaint();
+          reset();
+          global.app.toast('Reviewing ' + missedSnapshot.length + ' missed', 'info');
         });
         acts.appendChild(reviewBtn);
       }
@@ -639,6 +644,8 @@
         text: '↻ Restart all',
       });
       restart.addEventListener('click', function () {
+        // Explicit "all" — drop any review-mode lock back to the full deck.
+        activePoolIds = null;
         restorePlayShell();
         reset();
       });
