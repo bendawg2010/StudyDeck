@@ -497,6 +497,20 @@
 
     // ----- Done state ----------------------------------------------------
 
+    /// showDone() wipes `page` and replaces it with the results panel.
+    /// Restart / Review-missed need the original play-shell (bar, toolbar,
+    /// stage, actions, keyhint) put back before reset()/repaint() can do
+    /// anything visible — they update DOM nodes by reference, and those
+    /// nodes are detached after showDone().
+    function restorePlayShell() {
+      while (page.firstChild) page.removeChild(page.firstChild);
+      page.appendChild(bar);
+      page.appendChild(toolbar);
+      page.appendChild(stage);
+      page.appendChild(actions);
+      page.appendChild(keyhint);
+    }
+
     function showDone() {
       // Replace page contents with a results panel
       while (page.firstChild) page.removeChild(page.firstChild);
@@ -539,22 +553,19 @@
           const missedCards = missedIds
             .map(function (id) { return allCards.find(function (c) { return c.id === id; }); })
             .filter(Boolean);
+          // Put the play-shell back so cursor/stage have somewhere to render.
+          restorePlayShell();
           if (!missedCards.length) { reset(); return; }
-          // Override allCards-derived deck to use the missed list.
-          // This is a small hack: temporarily swap allCards' filter via a
-          // shadow buildDeck behaviour for the next reset.
+          // Override the buildDeck-derived deck with the missed list.
           deck = missedCards.slice();
           cursor = 0;
           knew = 0; again = 0;
           missedIds = [];
           isFlipped = false;
           startTime = performance.now();
-          // Rebuild the entire shell — done view replaced the toolbar
-          while (host.firstChild) host.removeChild(host.firstChild);
-          if (onKey) document.removeEventListener('keydown', onKey);
-          // Re-render via the route handler with a session flag so we don't
-          // accidentally re-run the seed shuffle.
-          location.hash = '#/play/flashcards/' + encodeURIComponent(setId) + '?missed=' + Date.now();
+          while (stage.firstChild) stage.removeChild(stage.firstChild);
+          buildStage();
+          repaint();
         });
         acts.appendChild(reviewBtn);
       }
@@ -563,7 +574,10 @@
         class: missedIds.length > 0 ? 'btn' : 'btn btn-primary',
         text: '↻ Restart all',
       });
-      restart.addEventListener('click', reset);
+      restart.addEventListener('click', function () {
+        restorePlayShell();
+        reset();
+      });
       acts.appendChild(restart);
 
       if (hardSet.size > 0 && !hardOnly) {
