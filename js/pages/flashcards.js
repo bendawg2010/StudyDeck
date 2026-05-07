@@ -48,6 +48,9 @@
     // 'Review missed' shortcut on the done screen and to drive a follow-up
     // run with only the misses.
     let missedIds = [];
+    // Per-judgment history so Delete/Backspace can undo the last call.
+    // Each entry: { cardId, correct, addedToMissed }
+    let history = [];
     let isFlipped = false;
     let startTime = performance.now();
     let busy = false;            // true while a fly-off animation is in flight
@@ -141,6 +144,7 @@
     const hintParts = [
       ['↑↓', 'flip'],
       ['→', 'I know it'], ['←', 'still learning'],
+      ['⌫', 'undo'],
       ['.', 'star'], ['U', 'shuffle'],
     ];
     hintParts.forEach(function (p, i) {
@@ -183,6 +187,10 @@
           e.preventDefault(); toggleHard(); break;
         case 'r': case 'R':
           e.preventDefault(); reset(); global.app.toast('Restarted'); break;
+        case 'Backspace':
+        case 'Delete':
+          // Undo the last judgment — bring the previous card back
+          e.preventDefault(); undoLastJudgment(); break;
       }
     };
     document.addEventListener('keydown', onKey);
@@ -250,6 +258,7 @@
       cursor = 0;
       knew = 0; again = 0;
       missedIds = [];
+      history = [];
       isFlipped = false;
       startTime = performance.now();
       // Wipe the current stage and rebuild
@@ -387,14 +396,50 @@
     function judge(correct) {
       if (busy) return;
       if (cursor >= deck.length) return;
+      const c = deck[cursor];
+      let addedToMissed = false;
       if (correct) {
         knew++;
       } else {
         again++;
-        const c = deck[cursor];
-        if (c && !missedIds.includes(c.id)) missedIds.push(c.id);
+        if (c && !missedIds.includes(c.id)) {
+          missedIds.push(c.id);
+          addedToMissed = true;
+        }
       }
+      history.push({ cardId: c ? c.id : null, correct: correct, addedToMissed: addedToMissed });
       flyOff(correct);
+    }
+
+    /// Roll back the last judgment. Works mid-deck OR on the done screen.
+    function undoLastJudgment() {
+      if (busy) return;
+      if (history.length === 0) {
+        global.app.toast('Nothing to undo', 'info');
+        return;
+      }
+      const last = history.pop();
+      // Roll back stats
+      if (last.correct) knew = Math.max(0, knew - 1);
+      else              again = Math.max(0, again - 1);
+      // If this judgment was the one that put the card on the missed list,
+      // take it back off — but only if it's not still on there from an
+      // earlier miss.
+      if (last.addedToMissed) {
+        const idx = missedIds.indexOf(last.cardId);
+        if (idx >= 0) missedIds.splice(idx, 1);
+      }
+      // If we're on the done screen, put the play-shell back first
+      const onDone = page.querySelector('.fc2-done') !== null;
+      if (onDone) restorePlayShell();
+      // Step back one card
+      cursor = Math.max(0, cursor - 1);
+      isFlipped = false;
+      buildStage();
+      repaint();
+      // Slide the restored card in from the side it flew off to
+      slideInFrom(last.correct);
+      global.app.toast(last.correct ? '↺ Undid: I knew it' : '↺ Undid: Still learning', 'info');
     }
 
     function toggleHard() {
@@ -467,6 +512,24 @@
         repaint();
         busy = false;
       };
+    }
+
+    /// Mirror of flyOff — bring the previous card BACK from where it
+    /// flew off to. Used by undo. Cursor is already pointing at it.
+    function slideInFrom(correct) {
+      if (reduceMotion) return;
+      const front = stage.querySelector('.depth-0');
+      if (!front) return;
+      const fromX = correct ? 130 : -130;
+      const fromRot = correct ? 18 : -18;
+      busy = true;
+      front.animate(
+        [
+          { transform: 'translate(' + fromX + '%, -10%) rotate(' + fromRot + 'deg)', opacity: 0 },
+          { transform: 'translate(0, 0) rotate(0)', opacity: 1 },
+        ],
+        { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' },
+      ).onfinish = function () { busy = false; };
     }
 
     function burstFromCard(card, good) {
@@ -561,6 +624,7 @@
           cursor = 0;
           knew = 0; again = 0;
           missedIds = [];
+          history = [];
           isFlipped = false;
           startTime = performance.now();
           while (stage.firstChild) stage.removeChild(stage.firstChild);
