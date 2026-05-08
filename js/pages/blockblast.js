@@ -209,7 +209,12 @@
 
     let totalAttempts = 0;
     let correctAttempts = 0;
-    const quizQueue = [];          // cards waiting to be quizzed
+    /// New gate (per user feedback "every three blocks you have to type
+    /// an answer to something correct to get 3 more"): after the third
+    /// piece in the tray is placed, BEFORE refilling, the player must
+    /// correctly TYPE a flashcard answer. No multiple-choice; no
+    /// auto-dismiss; tray stays empty until they get it right.
+    let pendingRefill = false;     // tray needs a refill but is blocked on a quiz
 
     // ---------- piece factory ----------
     function makePiece(idx) {
@@ -240,10 +245,29 @@
       for (let i = 0; i < trayPieces.length; i++) {
         if (trayPieces[i]) { allEmpty = false; break; }
       }
-      if (allEmpty) {
-        trayPieces = [makePiece(0), makePiece(1), makePiece(2)];
-        renderTray();
+      if (!allEmpty) return;
+      // Tray empty → quiz the user before handing them three more.
+      // A correct typed answer is required to actually refill (the
+      // "every three blocks" gate). Wrong answers reveal the right
+      // one and keep the tray empty, but the player can choose to
+      // continue (with a score penalty already applied) and try the
+      // next card. Pieces are NOT generated until the gate clears.
+      pendingRefill = true;
+      const card = pickCard(validCards);
+      if (!card) {
+        // No cards in the set — fall back to ungated refill.
+        doActualRefill();
+        return;
       }
+      showRefillQuiz(card);
+    }
+
+    function doActualRefill() {
+      trayPieces = [makePiece(0), makePiece(1), makePiece(2)];
+      pendingRefill = false;
+      renderTray();
+      // Game over check waited until pieces existed; do it now.
+      checkGameOver();
     }
 
     function initTray() {
@@ -370,11 +394,23 @@
       // gain placement score = cells * 1
       addScore(placed.length);
 
-      // After placement, scan for line clears, then refill, then check game over
+      // After placement: clear lines → maybe refill (gated by typed
+      // quiz when the tray's empty) → game-over check. If the tray is
+      // still partially full, refillTrayIfEmpty no-ops and we just
+      // checkGameOver; if it just emptied, the quiz overlay opens and
+      // checkGameOver runs at the end of doActualRefill instead (so we
+      // don't false-positive game-over while the tray is intentionally
+      // empty waiting on a typed answer).
       scanAndClearLines(function () {
-        refillTrayIfEmpty();
         announce('Score ' + score);
-        checkGameOver();
+        const wasEmpty = trayPieces.every(function (p) { return !p; });
+        refillTrayIfEmpty();
+        if (!wasEmpty) {
+          // Tray still has pieces; safe to check immediately
+          checkGameOver();
+        }
+        // If wasEmpty: doActualRefill (called after the quiz) handles
+        // the game-over check.
       });
     }
 
@@ -444,21 +480,10 @@
       }
 
       announce('Cleared ' + totalLines + ' line' + (totalLines === 1 ? '' : 's'));
-
-      // Queue a quiz card from a random cleared cell with a card
-      const quizCandidates = clearedCells.filter(function (cd) {
-        return cd.data && cd.data.cardId;
-      });
-      if (quizCandidates.length) {
-        const pick = quizCandidates[Math.floor(Math.random() * quizCandidates.length)];
-        quizQueue.push({
-          term: pick.data.term,
-          definition: pick.data.definition,
-          cardId: pick.data.cardId
-        });
-      }
-      // process queue (one at a time)
-      processQuizQueue(done);
+      // No more quiz-on-line-clear (per user: "it also shouldnt auto
+      // answer", and the typed quiz now happens on tray refill instead).
+      // Line clears are pure score/spectacle.
+      if (typeof done === 'function') done();
     }
 
     function showComboBanner(lines, pts) {
@@ -531,130 +556,191 @@
       rafId = requestAnimationFrame(step);
     }
 
-    // ---------- quiz overlay ----------
-    function processQuizQueue(done) {
-      if (!quizQueue.length || gameOverFlag) {
-        if (typeof done === 'function') done();
-        return;
-      }
-      const q = quizQueue.shift();
-      showQuiz(q, function () {
-        // chain remaining
-        processQuizQueue(done);
-      });
+    // ---------- typed-answer refill quiz ----------
+    /// Compare a typed guess to the correct term. Strips whitespace,
+    /// lowercases, and ignores trailing punctuation so "Mitosis" and
+    /// "mitosis." both count as correct. We also accept exact-match
+    /// alternative answers separated by '/' or ',' in the term (so a
+    /// card term of "USA/America" accepts either spelling).
+    function normalizeAnswer(s) {
+      return String(s || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[.,;:!?]+$/g, '')
+        .replace(/\s+/g, ' ');
+    }
+    function isCorrectAnswer(guess, term) {
+      const g = normalizeAnswer(guess);
+      if (!g) return false;
+      const alts = String(term || '').split(/[\/,]/).map(normalizeAnswer).filter(Boolean);
+      return alts.indexOf(g) !== -1;
     }
 
-    function showQuiz(q, after) {
-      interactionLocked = true;
-      // build choices: 1 correct + 3 distractors
-      const distractors = global.app.shuffle(
-        validCards
-          .filter(function (c) { return c.id !== q.cardId; })
-          .map(function (c) { return c.term; })
-      ).slice(0, 3);
-      // Pad if not enough cards
-      while (distractors.length < 3) {
-        distractors.push('—');
-      }
-      const choices = global.app.shuffle([q.term].concat(distractors));
+    function clearChildren(node) {
+      while (node.firstChild) node.removeChild(node.firstChild);
+    }
 
-      while (quizOverlay.firstChild) quizOverlay.removeChild(quizOverlay.firstChild);
+    /// Shown when the tray empties. The player is given the DEFINITION
+    /// from a random card and must TYPE the term. No auto-dismiss, no
+    /// multiple choice — they have to actually know it. A correct
+    /// answer triggers the next 3-piece refill; a wrong one reveals
+    /// the answer and offers a "Continue anyway" button (with score
+    /// penalty already applied) so the game never deadlocks.
+    function showRefillQuiz(card) {
+      interactionLocked = true;
+
+      clearChildren(quizOverlay);
       quizOverlay.classList.add('is-visible');
       quizOverlay.setAttribute('aria-hidden', 'false');
       quizOverlay.setAttribute('role', 'dialog');
       quizOverlay.setAttribute('aria-modal', 'true');
-      quizOverlay.setAttribute('aria-label', 'Quick quiz');
+      quizOverlay.setAttribute('aria-label', 'Type the term to get 3 more pieces');
 
-      const card = global.app.el('div', { class: 'bb-quiz-card' });
-      card.appendChild(global.app.el('div', { class: 'bb-quiz-label', text: 'Definition' }));
+      const cardEl = global.app.el('div', { class: 'bb-quiz-card bb-quiz-typed' });
+
+      cardEl.appendChild(global.app.el('div', {
+        class: 'bb-quiz-label',
+        text: 'Type the term to unlock 3 more pieces'
+      }));
+
       const def = global.app.el('div', { class: 'bb-quiz-def' });
-      def.textContent = q.definition || '';
-      card.appendChild(def);
+      def.textContent = card.definition || '';
+      cardEl.appendChild(def);
 
-      const choicesWrap = global.app.el('div', { class: 'bb-quiz-choices' });
-      const buttons = [];
-      let answered = false;
-      let timeoutHandle = 0;
-      let countdownHandle = 0;
-
-      function pick(choice, btn) {
-        if (answered) return;
-        answered = true;
-        clearTimeout(timeoutHandle);
-        clearInterval(countdownHandle);
-        totalAttempts++;
-        if (choice === q.term) {
-          correctAttempts++;
-          addScore(25);
-          btn.classList.add('is-correct');
-          card.classList.add('flash-green');
-          try { global.app.sound.success(); } catch (e) {}
-          announce('Correct! +25');
-          setTimeout(closeAndContinue, 700);
-        } else {
-          addScore(-10);
-          btn.classList.add('is-wrong');
-          // reveal correct
-          buttons.forEach(function (b) {
-            if (b.textContent === q.term) b.classList.add('is-correct-reveal');
-          });
-          card.classList.add('flash-red');
-          try { global.app.sound.error(); } catch (e) {}
-          announce('Wrong. The answer was ' + q.term);
-          setTimeout(closeAndContinue, 1200);
-        }
-      }
-
-      function closeAndContinue() {
-        quizOverlay.classList.remove('is-visible');
-        quizOverlay.setAttribute('aria-hidden', 'true');
-        while (quizOverlay.firstChild) quizOverlay.removeChild(quizOverlay.firstChild);
-        interactionLocked = false;
-        if (typeof after === 'function') after();
-      }
-
-      choices.forEach(function (txt) {
-        const b = global.app.el('button', { class: 'bb-quiz-choice' });
-        b.textContent = txt;
-        b.addEventListener('click', function () { pick(txt, b); });
-        b.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(txt, b); }
-        });
-        choicesWrap.appendChild(b);
-        buttons.push(b);
+      // Input row
+      const inputWrap = global.app.el('div', { class: 'bb-quiz-input-wrap' });
+      const input = global.app.el('input', {
+        type: 'text',
+        class: 'bb-quiz-input',
+        placeholder: 'Your answer…',
+        autocomplete: 'off',
+        autocapitalize: 'off',
+        autocorrect: 'off',
+        spellcheck: 'false',
+        // Tell 1Password / LastPass / Bitwarden to leave this field
+        // alone — password managers were popping up over the input
+        // and stealing focus mid-game.
+        'data-1p-ignore': 'true',
+        'data-lpignore': 'true',
+        'data-bwignore': 'true'
       });
-      card.appendChild(choicesWrap);
+      const submit = global.app.el('button', {
+        class: 'btn btn-primary bb-quiz-submit',
+        type: 'button',
+        text: 'Submit'
+      });
+      inputWrap.appendChild(input);
+      inputWrap.appendChild(submit);
+      cardEl.appendChild(inputWrap);
+
+      // Feedback message under input
+      const feedback = global.app.el('div', { class: 'bb-quiz-feedback' });
+      cardEl.appendChild(feedback);
+
+      // Action row that swaps in after a wrong answer (Try Again /
+      // Continue Anyway) so the game can't deadlock if the player
+      // legitimately doesn't know the term.
+      const actions = global.app.el('div', { class: 'bb-quiz-actions', style: 'display:none' });
+      cardEl.appendChild(actions);
 
       const tip = global.app.el('div', { class: 'bb-quiz-tip' });
-      tip.textContent = 'Auto-dismiss in 5s';
-      card.appendChild(tip);
+      tip.textContent = 'Press Enter to submit. Tab to focus the input.';
+      cardEl.appendChild(tip);
 
-      quizOverlay.appendChild(card);
+      quizOverlay.appendChild(cardEl);
 
-      // 5s auto-dismiss countdown
-      let remain = 5;
-      countdownHandle = setInterval(function () {
-        remain--;
-        if (remain <= 0) {
-          tip.textContent = '...';
-        } else {
-          tip.textContent = 'Auto-dismiss in ' + remain + 's';
-        }
-      }, 1000);
-      timeoutHandle = setTimeout(function () {
+      // Focus input — small delay so the slide-in animation finishes
+      // before iOS Safari kicks the keyboard up.
+      setTimeout(function () { input.focus(); input.select(); }, 30);
+
+      let answered = false;
+
+      function gradeAndContinue() {
         if (answered) return;
         answered = true;
-        clearInterval(countdownHandle);
-        // reveal correct without penalty
-        buttons.forEach(function (b) {
-          if (b.textContent === q.term) b.classList.add('is-correct-reveal');
-        });
-        announce('Time up. The answer was ' + q.term);
-        setTimeout(closeAndContinue, 700);
-      }, 5000);
+        totalAttempts++;
+        const guess = input.value;
+        if (isCorrectAnswer(guess, card.term)) {
+          correctAttempts++;
+          addScore(30);
+          cardEl.classList.add('flash-green');
+          feedback.textContent = '✓ Correct! +30';
+          feedback.className = 'bb-quiz-feedback is-correct';
+          try { global.app.sound.success(); } catch (e) {}
+          announce('Correct. The term was ' + card.term);
+          setTimeout(closeAndRefill, 600);
+          return;
+        }
+        // Wrong answer — small penalty, reveal correct term, give the
+        // player Try Again / Continue Anyway choices. No auto-dismiss.
+        addScore(-10);
+        cardEl.classList.add('flash-red');
+        clearChildren(feedback);
+        const wrongLine = global.app.el('div', { class: 'bb-quiz-feedback-line is-wrong' });
+        wrongLine.textContent = 'Not quite. The answer was:';
+        const correctLine = global.app.el('div', { class: 'bb-quiz-feedback-line is-correct-reveal' });
+        correctLine.textContent = card.term;
+        feedback.appendChild(wrongLine);
+        feedback.appendChild(correctLine);
 
-      // focus first button for keyboard users
-      setTimeout(function () { if (buttons[0]) buttons[0].focus(); }, 30);
+        try { global.app.sound.error(); } catch (e) {}
+        announce('Wrong. The answer was ' + card.term);
+
+        // Hide the submit button row; show Try Again / Continue
+        inputWrap.style.display = 'none';
+        actions.style.display = '';
+
+        const tryAgain = global.app.el('button', {
+          class: 'btn btn-ghost', type: 'button',
+          text: 'Try Again (new card)'
+        });
+        tryAgain.addEventListener('click', function () {
+          // Re-arm the quiz with a different card so the player can't
+          // grind the same one. The score penalty stays.
+          answered = false;
+          input.value = '';
+          inputWrap.style.display = '';
+          actions.style.display = 'none';
+          clearChildren(actions);
+          clearChildren(feedback);
+          feedback.className = 'bb-quiz-feedback';
+          cardEl.classList.remove('flash-red');
+          // Pick a fresh card and update the definition shown.
+          const next = pickCard(validCards);
+          if (next) {
+            card = next;
+            def.textContent = card.definition || '';
+          }
+          setTimeout(function () { input.focus(); }, 20);
+        });
+
+        const continueBtn = global.app.el('button', {
+          class: 'btn btn-primary', type: 'button',
+          text: 'Continue (no points)'
+        });
+        continueBtn.addEventListener('click', function () { closeAndRefill(); });
+
+        actions.appendChild(tryAgain);
+        actions.appendChild(continueBtn);
+        setTimeout(function () { tryAgain.focus(); }, 30);
+      }
+
+      function closeAndRefill() {
+        quizOverlay.classList.remove('is-visible');
+        quizOverlay.setAttribute('aria-hidden', 'true');
+        clearChildren(quizOverlay);
+        interactionLocked = false;
+        // NOW give the player their three new pieces.
+        doActualRefill();
+      }
+
+      submit.addEventListener('click', gradeAndContinue);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          gradeAndContinue();
+        }
+      });
     }
 
     // ---------- pointer drag interactions ----------
@@ -966,7 +1052,7 @@
       scoreEl.textContent = '0';
       totalAttempts = 0;
       correctAttempts = 0;
-      quizQueue.length = 0;
+      pendingRefill = false;
       kbActive = false;
       kbFocus = { trayIdx: 0, r: 3, c: 3 };
       gameOverFlag = false;

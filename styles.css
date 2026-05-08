@@ -1926,6 +1926,75 @@ main {
   letter-spacing: 0.02em;
 }
 
+/* ── Typed-answer refill quiz (every-3-pieces gate) ─────────────────
+   The refill quiz is text-input only — no multiple choice and no
+   auto-dismiss. Replaces the old line-clear multiple-choice popup
+   so players have to actually KNOW the term to get more pieces. */
+.bb-quiz-card.bb-quiz-typed {
+  /* Slightly wider so the input + Submit button sit comfortably in
+     a single row. The choice-grid version was narrower because each
+     row held two buttons; here we have an input row instead. */
+  max-width: 520px;
+}
+.bb-quiz-input-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 6px;
+}
+.bb-quiz-input {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.bb-quiz-input::placeholder { color: var(--text-3); font-weight: 500; }
+.bb-quiz-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 32%, transparent);
+}
+.bb-quiz-submit { font-size: 14px; padding: 0 18px; }
+.bb-quiz-feedback {
+  min-height: 1.4em;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.01em;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+.bb-quiz-feedback.is-correct { color: var(--success, #34C759); }
+.bb-quiz-feedback-line.is-wrong { color: var(--text-2); }
+.bb-quiz-feedback-line.is-correct-reveal {
+  color: var(--success, #34C759);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.bb-quiz-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.bb-quiz-actions .btn { flex: 1; max-width: 220px; }
+
+@media (max-width: 600px) {
+  .bb-quiz-input-wrap { flex-direction: column; }
+  .bb-quiz-submit { padding: 12px; }
+  .bb-quiz-actions { flex-direction: column; }
+  .bb-quiz-actions .btn { max-width: none; }
+}
+
 .bb-hint {
   font-size: 12px;
   color: var(--text-3);
